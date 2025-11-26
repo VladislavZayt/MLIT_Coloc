@@ -517,103 +517,6 @@ def cnf_to_string(cnf: Formula) -> str:
     # Выход: "A ∨ B, C, D ∨ E"
     #
 
-
-class Literal:
-    def __init__(self, name: str, args: List[str], negated: bool = False):
-        self.name = name
-        self.args = tuple(args)
-        self.negated = negated
-    #Literal("Любит", ["x", "y"], True)
-
-    #создание отрицания литерала
-    def negate(self):
-        return Literal(self.name, list(self.args), not self.negated)
-
-    #строковое представление
-    def __repr__(self):
-        sign = "¬" if self.negated else ""
-        args = ','.join(self.args)
-        return f"{sign}{self.name}({args})" if args else f"{sign}{self.name}"
-    # Literal("Человек", ["Катя"]) -> Выход: Человек(Катя)
-
-    #определяет, когда два литерала считаются одинаковыми
-    def __eq__(self, other):
-        return isinstance(other, Literal) and (self.name, self.args, self.negated) == (
-            other.name, other.args, other.negated)
-
-    def __hash__(self):
-        return hash((self.name, self.args, self.negated))
-        #хэшируемый кортеж
-
-def parse_cnf(text: str) -> List[List[Literal]]:
-    """
-    Разбиваем на клаузы по верхнеуровневым запятым
-    P(x,y), Q(f(a), b) ∨ R(z), S(t)
-    """
-    clauses: List[List[Literal]] = []
-    #разбиваем по запятым
-    for clause_str in split_top_level(text, sep=','):
-
-        #проверка на пустую строку
-        clause_str = clause_str.strip()
-        if not clause_str:
-            continue
-        lits: List[Literal] = []
-
-        #разбиение по V с любым количеством пробелов вокруг
-        for part in re.split(r'\s*∨\s*', clause_str):
-            #удаление пробелов
-            part = part.strip()
-            if not part:
-                continue
-            # проверяет, начинается ли литерал с символа отрицания
-            negated = part.startswith('¬')
-            if negated:
-                #удаление отрицания
-                part = part[1:].strip()
-
-            # cодержит ли строка символ открывающей скобки (является ли это предикатом с аргументами)
-            if '(' in part and part.endswith(')'): # и заканчивается ли строка символом закрывающей скобки
-
-                # разделяем строку на первой встреченной открывающей скобке
-                name, args_part = part.split('(', 1)
-                # Разбираем строку аргументов: удаляем закрывающую скобку с конца, разбиваем по запятым на отдельные аргументы,
-                # и для каждого аргумента убираем лишние пробелы вокруг, создавая чистый список аргументов предиката
-                args = [a.strip() for a in args_part.rstrip(')').split(',')]
-
-            #обработка предикатов без аргументов
-            else:
-                name, args = part, []
-            #Собирает все обработанные компоненты в объект Literal
-            lits.append(Literal(name, args, negated))
-        # добавление в результат
-        clauses.append(lits)
-    return clauses
-
-
-def unify_literals(l1: Literal, l2: Literal) -> Optional[Dict[str, str]]:
-    if l1.name != l2.name or l1.negated == l2.negated or len(l1.args) != len(l2.args):
-        return None
-    subst: Dict[str, str] = {}
-    for a1, a2 in zip(l1.args, l2.args):
-        if a1.islower():
-            if a1 in subst and subst[a1] != a2:
-                return None
-            subst[a1] = a2
-        elif a2.islower():
-            if a2 in subst and subst[a2] != a1:
-                return None
-            subst[a2] = a1
-        elif a1 != a2:
-            return None
-    return subst
-
-
-def apply_subst_to_literal(lit: Literal, subst: Dict[str, str]) -> Literal:
-    new_args = [subst.get(a, a) for a in lit.args]
-    return Literal(lit.name, new_args, lit.negated)
-
-
 class Literal:
     def __init__(self, name: str, args: List[str], negated: bool = False):
         self.name = name
@@ -856,5 +759,6 @@ class ResolutionEngine:
 
                 j += 1
             i += 1
+
 
         return False, steps + ["Противоречие не найдено"]
